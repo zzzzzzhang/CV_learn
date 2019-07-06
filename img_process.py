@@ -258,4 +258,3 @@ def random_warp(img,random_num = 50):
 img_cat_prespected = random_warp(img_cat)
 cv2.imshow('img_cat_prespected', img_cat_prespected)
 hotKey()
-
