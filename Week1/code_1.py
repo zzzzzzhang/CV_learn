@@ -125,7 +125,7 @@ img_yuv = cv2.cvtColor(img_small_brighter, cv2.COLOR_BGR2YUV)
 # equalize the histogram of the Y channel
 img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])   # only for 1 channel
 # convert the YUV image back to RGB format
-img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)   # y: luminance(明亮度), u&v: 色度饱和度
+img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)   # y: luminance(脙梅脕脕露脠), u&v: 脡芦露脠卤楼潞脥露脠
 cv2.imshow('Color input image', img_small_brighter)
 cv2.imshow('Histogram equalized', img_output)
 key = cv2.waitKey(0)
