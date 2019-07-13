@@ -1,31 +1,15 @@
-
 # coding: utf-8
-
-# In[ ]:
-
 
 import numpy as np
 import cv2 as cv
-
-
-# In[ ]:
-
 
 def hotKey(key_num = 27):
     key = cv.waitKey()
     if key == key_num:
         cv.destroyAllWindows()
 
-
-# In[ ]:
-
-
 path = r'source/cat.jpg'
 img_cat = cv.imread(path,0)
-
-
-# In[ ]:
-
 
 def medianBlur(img, kernel, padding_way = 'zero'):
     '''
@@ -64,15 +48,7 @@ def medianBlur(img, kernel, padding_way = 'zero'):
             img[i,j] = box[m*n//2]
     return img
 
-
-# In[ ]:
-
-
 img = medianBlur(img_cat,(5,5),'same')
-
-
-# In[ ]:
-
 
 cv.imshow('img', img)
 cv.imshow('img_cat', img_cat)
