@@ -1,20 +1,21 @@
-
 # coding: utf-8
 
 #recode LinearRegression in 'python's way'.use less for loop.
 import numpy as np
 import random
 np.set_printoptions(suppress= True)
+from matplotlib import pyplot as plt
 
-#generate samples ;w:10,b:10
+#generate samples ;w:1,b:-2-2
 def gen_sample(num):
     '''
     num: number of samples
     '''
-    w = np.full(num,10) + np.random.rand(num)
-    b = np.full(num,50) + (np.random.rand(num) * 20 - 10)
-    input_x = np.arange(1,num+1)
+    w = 3 + np.random.random()
+    b = np.random.randint(-100,101,num)/5 + 100
+    input_x = np.random.randint(0,101,num) * np.random.random(num)
     input_y = w * input_x + b
+    print('w = {0} ,b = {1}'.format(w,b.mean()))
     return input_x, input_y
 
 # inference, test, predict, same thing. Run model after training
@@ -31,7 +32,7 @@ def eval_loss(w, b, x_real, y_real):
     y_real: real y
     '''
     y_pred = predict(w, b, x_real)
-    loss = ((y_pred - y_real)**2).mean()
+    loss = 0.5*((y_pred - y_real)**2).mean()
     return loss
 
 # get gradient
@@ -63,15 +64,17 @@ def train(batch_size, x, y, epoch, lr):
         w, b = update_gradient(batch_x, batch_y, w, b, lr)
 #         calculate loss
         loss = eval_loss(w, b, batch_x, batch_y)
-
-        print('epoch:{},w:{},b:{}\nloss = {}\n'.format(epo+1, w, b, loss))
-
+    print('epoch:{},w:{},b:{}\nloss = {}\n'.format(epo+1, w, b, loss))
+    return w, b
+        
 def run():
-    input_x, input_y = gen_sample(1000)
+    input_x, input_y = gen_sample(10000)
     lr = 0.001
-    batch_size = 100
-    epoch = 5
-    train(batch_size, input_x, input_y, epoch, lr)
+    batch_size = 50
+    epoch = 12000
+    plt.plot(input_x,input_y,'b.')
+    w, b = train(batch_size, input_x, input_y, epoch, lr)
+    plt.plot(input_x,predict(w, b, input_x),'r-')
 
 if __name__ == '__main__':
     run()
