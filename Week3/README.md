@@ -2,7 +2,7 @@
 **finished(√)** ———— LinearRegression.py
 
 # 2.logistic Regression in "python's way"
-**undone(X)** ———— logisticRegression.py
+**finished(√)** ———— logisticRegression.py
 
 # 3.mathematics
 **undone(x)** ———— mathematics.py
