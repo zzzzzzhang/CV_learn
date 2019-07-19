@@ -1,3 +1,4 @@
+
 # coding: utf-8
 
 #recode LinearRegression in 'python's way'.use less for loop.
@@ -70,7 +71,7 @@ def train(batch_size, x, y, epoch, lr):
 def run():
     input_x, input_y = gen_sample(10000)
     lr = 0.001
-    batch_size = 50
+    batch_size = 5000
     epoch = 12000
     plt.plot(input_x,input_y,'b.')
     w, b = train(batch_size, input_x, input_y, epoch, lr)
