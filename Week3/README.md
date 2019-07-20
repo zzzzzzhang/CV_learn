@@ -5,4 +5,4 @@
 **finished(√)** ———— logisticRegression.py
 
 # 3.mathematics
-**undone(x)** ———— mathematics.py
+**finished(√)** ———— RiversMath.py
