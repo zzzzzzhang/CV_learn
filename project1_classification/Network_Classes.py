@@ -10,11 +10,11 @@ class Net(nn.Module):
         self.maxpool1 = nn.MaxPool2d(kernel_size= 2)
         self.relu1 = nn.ReLU(inplace= True)
         
-        self.conv2 = nn.Conv2d(3,6,5)
+        self.conv2 = nn.Conv2d(3,6,3)
         self.maxpool2 = nn.MaxPool2d(kernel_size= 2)
         self.relu2 = nn.ReLU(inplace= True)
         
-        self.fc1 = nn.Linear(6 * 123 * 123, 150)
+        self.fc1 = nn.Linear(6 * 30 * 30, 150)
         self.relu3 = nn.ReLU(inplace= True)
         
         self.drop = nn.Dropout(p = 0.5)
@@ -30,7 +30,7 @@ class Net(nn.Module):
         x = self.maxpool2(x)
         x = self.relu2(x)
         
-        x = x.view(-1, 6 * 123 * 123)
+        x = x.view(-1, 6 * 30 * 30)
         
         x = self.fc1(x)
         x = self.relu3(x)
