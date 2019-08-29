@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import os
@@ -18,19 +18,19 @@ from torch.optim import lr_scheduler
 import copy
 
 
-# In[2]:
+# In[ ]:
 
 
-root_dir = 'D:/cv_learn/projectI/Dataset/'
+root_dir = 'F:/data/cv_learn/Dataset/'
 train_dir = 'train/'
 val_dir = 'val/'
-train_anno = 'train_annotation.csv'
-val_anno = 'val_annotation.csv'
+train_anno = 'Classes_train_annotation.csv'
+val_anno = 'Classes_val_annotation.csv'
 classes = ['Mammals', 'Birds']
 species = ['rabbits', 'chickens','rats']
 
 
-# In[3]:
+# In[ ]:
 
 
 class myDataset():
@@ -74,7 +74,7 @@ class myDataset():
         return sample
 
 
-# In[4]:
+# In[ ]:
 
 
 #transforms:按顺序进行相应transform操作
@@ -96,7 +96,7 @@ val_dataset = myDataset(root_dir= root_dir + val_dir,
                        )
 
 
-# In[5]:
+# In[ ]:
 
 
 # 转化为Dataloader
@@ -105,17 +105,17 @@ val_loader = DataLoader(dataset= val_dataset)
 data_loaders = {'train': train_loader, 'val': val_loader}
 
 
-# In[6]:
+# In[ ]:
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 print(device)
 
 
-# In[7]:
+# In[ ]:
 
 
-def visualize_dataset(idx):
+def visualize_trainDataset(idx):
     '''
     数据可视化
     '''
@@ -127,11 +127,28 @@ def visualize_dataset(idx):
     img = sample['image']
     plt.imshow(transforms.ToPILImage()(img))
     plt.show()
-    
-visualize_dataset(485)
+visualize_trainDataset(750)
 
 
-# In[12]:
+# In[ ]:
+
+
+def visualize_valDataset(idx):
+    '''
+    数据可视化
+    '''
+    print(len(val_dataset))
+    #提取第idx个数据
+    sample = val_loader.dataset[idx]
+    #sample['image'] ：tensor of image 
+    print(idx, sample['image'].shape, classes[sample['classes']], species[sample['species']])
+    img = sample['image']
+    plt.imshow(transforms.ToPILImage()(img))
+    plt.show()
+visualize_valDataset(46)
+
+
+# In[ ]:
 
 
 def train_model(model, data_loaders, criterion, optimizer, scheduler, num_epochs= 50):
@@ -143,7 +160,13 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, num_epochs
     num_epochs：迭代次数
     '''
     loss_list = {'train':[], 'val':[]}
+    loss_list_classes = {'train':[], 'val':[]}
+    loss_list_species = {'train':[], 'val':[]}
+    
+    accuracy_list = {'train':[], 'val':[]}
     accuracy_list_classes = {'train':[], 'val':[]}
+    accuracy_list_species = {'train':[], 'val':[]}
+    accuracy = {'accuracy_list':accuracy_list, 'accuracy_list_classes':accuracy_list_classes, 'accuracy_list_species':accuracy_list_species}
     #保存最好的模型与精度
     best_model_weights = copy.deepcopy(model.state_dict())
     best_acc = 0.0
@@ -159,10 +182,14 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, num_epochs
                 model.eval()
             
             running_loss = 0.0
+            running_loss_classes = 0.0
+            running_loss_species = 0.0
             corrects_classes = 0
             corrects_species = 0
             
             for idx, data in enumerate(data_loaders[phase]):
+                if phase == 'train':
+                    print('training on batch {}'.format(idx))
                 inputs = data['image'].to(device)
                 labels_classes = data['classes'].to(device)
                 labels_species = data['species'].to(device)
@@ -179,7 +206,11 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, num_epochs
                     _, preds_classes = torch.max(x_classes, 1)
                     _, preds_species = torch.max(x_species, 1)
                     #这里的 nn.CrossEntropyLoss()中第二个参数可以理解是groundtruth中‘1’的位置
+                    #加权损失函数
+                    criterion.weight = torch.tensor(data = [1,2],dtype= torch.float)
+#                     criterion.weight = None
                     loss_classes = criterion(x_classes, labels_classes)
+                    criterion.weight = None
                     loss_species = criterion(x_species, labels_species)
                     
                     loss = loss_classes + loss_species
@@ -188,20 +219,25 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, num_epochs
                         loss.backward()
                         optimizer.step()
                 #loss.item() 返回一个value，乘以一个input.size，防止最后一组input数量不等
-                running_loss += loss.item() * inputs.size(0)
+                running_loss += loss * inputs.size(0)
+                running_loss_classes += loss_classes.item() * inputs.size(0)
+                running_loss_species += loss_species.item() * inputs.size(0)
                 #计算正确分类的个数
                 corrects_classes += torch.sum(preds_classes == labels_classes)
                 corrects_species += torch.sum(preds_species == labels_species)
-            #求batch的loss
-            epoch_loss = running_loss/len(data_loaders[phase].dataset)
-            loss_list[phase].append(epoch_loss)
+            #求整个batch的loss&记录不同loss
+            loss_list[phase].append(running_loss/len(data_loaders[phase].dataset))
+            loss_list_classes[phase].append(running_loss_classes/len(data_loaders[phase].dataset))
+            loss_list_species[phase].append(running_loss_species/len(data_loaders[phase].dataset))
             
             epoch_acc_classes = corrects_classes.double() / len(data_loaders[phase].dataset)
             epoch_acc_species = corrects_species.double() / len(data_loaders[phase].dataset)
             epoch_acc = (epoch_acc_classes + epoch_acc_species) * 0.5
             
             #乘以100应该是为了后面显示（）% ???
-            accuracy_list_classes[phase].append(100 * epoch_acc)
+            accuracy_list[phase].append(100 * epoch_acc)
+            accuracy_list_classes[phase].append(100 * epoch_acc_classes)
+            accuracy_list_species[phase].append(100 * epoch_acc_species)
             #用测试集测试，记录最佳权值
             if phase == 'val' and epoch_acc > best_acc:
                 best_acc = epoch_acc
@@ -210,11 +246,18 @@ def train_model(model, data_loaders, criterion, optimizer, scheduler, num_epochs
         
         #学习率衰减
         exp_lr_scheduler.step()
-            
+    #合并loss、acc
+    loss = {'loss_list' : loss_list, 'loss_list_classes' : loss_list_classes, 'loss_list_species':loss_list_species}
+    accuracy = {'accuracy_list':accuracy_list, 'accuracy_list_classes':accuracy_list_classes, 'accuracy_list_species':accuracy_list_species}
+    
+    #保存模型
     model.load_state_dict(best_model_weights)
-#     torch.save(model.state_dict(),'Acc_{:04d}'.format(round(best_acc.item() * 100)))
+    torch.save(model.state_dict(),'Acc_{:04d}'.format(round(best_acc.item() * 100)))
     print('Best val classes Acc: {:.2%}'.format(best_acc))
-    return model, loss_list, accuracy_list_classes
+    return model, loss, accuracy
+
+
+# In[ ]:
 
 
 network = Net().to(device)
@@ -223,36 +266,51 @@ criterion = nn.CrossEntropyLoss()
 #每步衰减至0.9 * 上步学习率
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size= 1, gamma= 0.9)
 #训练网络
-num_epochs = 1
-model, loss_list, accuracy_list_classes = train_model(network, 
-                                                      data_loaders, 
-                                                      criterion, 
-                                                      optimizer, 
-                                                      exp_lr_scheduler, 
-                                                      num_epochs= num_epochs)
+num_epochs = 100
+model, loss_dict, accuracy_dict = train_model(network, 
+                                              data_loaders, 
+                                              criterion, 
+                                              optimizer, 
+                                              exp_lr_scheduler, 
+                                              num_epochs= num_epochs)
 
 
-x = range(0, num_epochs)
-y1 = loss_list["val"]
-y2 = loss_list["train"]
+# In[ ]:
 
-plt.plot(x, y1, color="r", linestyle="-", marker="o", linewidth=1, label="val")
-plt.plot(x, y2, color="b", linestyle="-", marker="o", linewidth=1, label="train")
-plt.legend()
-plt.title('train and val loss vs. epoches')
-plt.ylabel('loss')
-plt.savefig("train and val loss vs epoches.jpg")
-plt.close('all') # 关闭图 0
 
-y5 = accuracy_list_classes["train"]
-y6 = accuracy_list_classes["val"]
-plt.plot(x, y5, color="r", linestyle="-", marker=".", linewidth=1, label="train")
-plt.plot(x, y6, color="b", linestyle="-", marker=".", linewidth=1, label="val")
-plt.legend()
-plt.title('train and val Classes_acc vs. epoches')
-plt.ylabel('Classes_accuracy')
-plt.savefig("train and val Classes_acc vs epoches.jpg")
-plt.close('all')
+def visualize_trainFig(task):
+    '''
+    phase: classes/species
+    '''
+    x = range(0, num_epochs)
+    y1 = loss_dict['loss_list_{}'.format(task)]['train']
+    y2 = loss_dict['loss_list_{}'.format(task)]['val']
+
+    plt.plot(x, y1, color="r", linestyle="-", marker="o", linewidth=1, label="val")
+    plt.plot(x, y2, color="b", linestyle="-", marker="o", linewidth=1, label="train")
+    plt.legend()
+    plt.title('{} loss vs epoches'.format(task))
+    plt.ylabel('loss')
+    plt.savefig("{} loss vs epoches.jpg".format(task))
+    plt.show()
+    plt.close('all') # 关闭图 0
+
+    y3 = accuracy_dict['accuracy_list_{}'.format(task)]["train"]
+    y4 = accuracy_dict['accuracy_list_{}'.format(task)]["val"]
+    plt.plot(x, y3, color="r", linestyle="-", marker=".", linewidth=1, label="train")
+    plt.plot(x, y4, color="b", linestyle="-", marker=".", linewidth=1, label="val")
+    plt.legend()
+    plt.title('train and val {}_acc vs epoches'.format(task))
+    plt.ylabel('{}_accuracy'.format(task))
+    plt.savefig("train and val {}_acc vs epoches.jpg".format(task))
+    plt.show()
+    plt.close('all')
+
+visualize_trainFig('classes')
+visualize_trainFig('species')
+
+
+# In[ ]:
 
 
 ############################################ Visualization ###############################################
@@ -262,15 +320,27 @@ def visualize_model(model):
         for i, data in enumerate(data_loaders['val']):
             inputs = data['image']
             labels_classes = data['classes'].to(device)
+            labels_species = data['species'].to(device)
 
-            x_classes = model(inputs.to(device))
-            x_classes=x_classes.view( -1,2)
+            x_classes, x_species = model(inputs.to(device))
+            x_classes = x_classes.view( -1,2)
+            x_species = x_species.view( -1,3)
             _, preds_classes = torch.max(x_classes, 1)
-
+            _, preds_species = torch.max(x_species, 1)
+            print(species[preds_species])
             print(inputs.shape)
             plt.imshow(transforms.ToPILImage()(inputs.squeeze(0)))
-            plt.title('predicted classes: {}\n ground-truth classes:{}'.format(classes[preds_classes],classes[labels_classes]))
+            plt.title('predicted classes: {}\n ground-truth classes: {}\n                        predicted species: {}\n ground-truth species: {}'.format(classes[preds_classes], 
+                                                                             classes[labels_classes], 
+                                                                             species[preds_species],
+                                                                             species[labels_species]))
             plt.show()
 
 visualize_model(model)
+
+
+# In[ ]:
+
+
+
 
