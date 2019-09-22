@@ -2,6 +2,10 @@
 ---
 ### project0:[基于opencv的图片拼接融合](https://github.com/zzzzzzhang/CV_learn/tree/master/project0_pictureStitching)
 ---
+### project1:[基于CNN模型的动物多任务分类](https://github.com/zzzzzzhang/CV_learn/tree/master/project1_classification)
+---
+### project2:[人脸关键点检测](https://github.com/zzzzzzhang/CV_learn/tree/master/project2_face_keypoints_detection)
+---
 ### w1: [图像的基本操作、图片数据扩增、opencv的使用](https://github.com/zzzzzzhang/CV_learn/tree/master/Week1)
 ---
 ### w2: [图片的卷积操作、各种滤波器的功能、SIFT算法、ransac算法](https://github.com/zzzzzzhang/CV_learn/tree/master/Week2)
