@@ -1,8 +1,4 @@
-
 # coding: utf-8
-
-# In[3]:
-
 
 import numpy as np
 import cv2
@@ -12,21 +8,13 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 from PIL import Image, ImageDraw 
 import itertools
-
-
-# In[5]:
-
+import random
 
 def channel_norm(img):
     mean = np.mean(img)
     std = np.std(img)
     pixels = (img-mean)/(std)
-    #print('doing channel_norm')
     return pixels
-
-
-# In[6]:
-
 
 def parse_line(line):
     line_parts = line.tolist()
@@ -35,10 +23,6 @@ def parse_line(line):
     rect = list(map(int, line_parts[1:5]))
     landmarks = list(map(float, line_parts[5: len(line_parts)]))
     return img_name, rect, landmarks
-
-
-# In[7]:
-
 
 class Normalize(object):
     """
@@ -52,10 +36,43 @@ class Normalize(object):
         img_resize = np.asarray(img.resize((self.train_boarder, self.train_boarder),Image.BILINEAR))
 #         img_resize = channel_norm(img_resize)
         return {'image':img_resize,'landmarks':landmask}
+        
+class  FlipHorizontal(object):
+    '''
+    flip horizontal
+    '''
+    def __init__(self,p= 0.5, train_boarder= 112):
+        self.p = p
+        self.train_boarder = train_boarder
+    def __call__(self,sample):
+        img, landmask = sample['image'], sample['landmarks']
+        if random.random() < self.p:
+            img = img[:,::-1].copy()
+            landmask[0::2] = self.train_boarder - landmask[0::2].copy()
+        return {'image':img,'landmarks':landmask}
 
-
-# In[27]:
-
+class  RandomRotation(object):
+    '''
+    RandomRotation(0,15)
+    '''
+    def __init__(self, train_boarder= 112):
+        self.train_boarder = train_boarder
+    def __call__(self,sample):
+        img, landmask = sample['image'], sample['landmarks']
+        ang = random.randint(-15, 15)
+        scale = 0.9
+        M = cv2.getRotationMatrix2D((self.train_boarder/2, self.train_boarder/2), ang, scale)
+        img = cv2.warpAffine(img, M, (self.train_boarder,self.train_boarder), flags= cv2.INTER_LINEAR)
+        xs = landmask[::2].copy()
+        ys = landmask[1::2].copy()
+        
+        #opencv获得的旋转矩阵是调整过的，需要注意
+        mxy = (np.c_[xs,ys] - np.array([self.train_boarder/2, self.train_boarder/2])) 
+        xys = (mxy.dot( np.transpose( M[:,:2] ) ) + np.array([self.train_boarder/2, self.train_boarder/2]))
+        
+        landmask[::2] = xys[:,0]
+        landmask[1::2] = xys[:,1]
+        return {'image':img,'landmarks':landmask}
 
 class ToTensor(object):
     """
@@ -74,10 +91,6 @@ class ToTensor(object):
         img = np.expand_dims(img, axis=0)
         return {'image':torch.from_numpy(img).float(), 
                 'landmarks':torch.from_numpy(landmarks).float()}
-
-
-# In[9]:
-
 
 class FaceLandmarksDataset():
     def __init__(self, data, transforms= None, train_boarder= 112):
@@ -112,10 +125,6 @@ class FaceLandmarksDataset():
         sample = self.transforms(sample)
         return sample
 
-
-# In[10]:
-
-
 def load_data(filepath, phase):
     '''
     加载数据
@@ -124,6 +133,8 @@ def load_data(filepath, phase):
     if phase == 'Train' or phase == 'train':
         tsfm = transforms.Compose([
             Normalize(),                # do channel normalization
+            FlipHorizontal(),           # do Flip Horizontal
+            RandomRotation(),           # do Random Rotation
             ToTensor()]                 # convert to torch type: NxCxHxW
         )
     else:
@@ -134,18 +145,10 @@ def load_data(filepath, phase):
     data_set = FaceLandmarksDataset(df, transforms= tsfm)
     return data_set
 
-
-# In[11]:
-
-
 def get_train_test_set():
     train_set = load_data('F:/data/cv_learn/项目/项目二/train/train_annotation.csv','train')
     valid_set = load_data('F:/data/cv_learn/项目/项目二/test/test_annotation.csv','test')
     return train_set, valid_set
-
-
-# In[25]:
-
 
 def drawLandMarks(path, idx):
     '''
@@ -163,11 +166,6 @@ def drawLandMarks(path, idx):
     draw.point(list(zip(xs,ys)),fill = (0))
     img.show()
 
-
-# In[26]:
-
-
 if __name__ == '__main__':
     path= 'F:/data/cv_learn/项目/项目二/train/train_annotation.csv'
-    drawLandMarks(path= path, idx= 5)
-
+    drawLandMarks(path= path, idx= 1564)
