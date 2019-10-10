@@ -55,23 +55,25 @@ class  RandomRotation(object):
     '''
     RandomRotation(0,15)
     '''
-    def __init__(self, train_boarder= 112):
+    def __init__(self, train_boarder= 112, p= 0.5):
         self.train_boarder = train_boarder
+        self.p = p
     def __call__(self,sample):
         img, landmask = sample['image'], sample['landmarks']
-        ang = random.randint(-15, 15)
-        scale = 0.9
-        M = cv2.getRotationMatrix2D((self.train_boarder/2, self.train_boarder/2), ang, scale)
-        img = cv2.warpAffine(img, M, (self.train_boarder,self.train_boarder), flags= cv2.INTER_LINEAR)
-        xs = landmask[::2].copy()
-        ys = landmask[1::2].copy()
+        if random.random() < self.p:
+            ang = random.randint(-5, 5)
+            scale = 1.0
+            M = cv2.getRotationMatrix2D((self.train_boarder/2, self.train_boarder/2), ang, scale)
+            img = cv2.warpAffine(img, M, (self.train_boarder,self.train_boarder), flags= cv2.INTER_LINEAR)
+            xs = landmask[::2].copy()
+            ys = landmask[1::2].copy()
         
-        #opencv获得的旋转矩阵是调整过的，需要注意
-        mxy = (np.c_[xs,ys] - np.array([self.train_boarder/2, self.train_boarder/2])) 
-        xys = (mxy.dot( np.transpose( M[:,:2] ) ) + np.array([self.train_boarder/2, self.train_boarder/2]))
+            #opencv获得的旋转矩阵是调整过的，需要注意
+            mxy = (np.c_[xs,ys] - np.array([self.train_boarder/2, self.train_boarder/2])) 
+            xys = (mxy.dot( np.transpose( M[:,:2] ) ) + np.array([self.train_boarder/2, self.train_boarder/2]))
         
-        landmask[::2] = xys[:,0]
-        landmask[1::2] = xys[:,1]
+            landmask[::2] = xys[:,0]
+            landmask[1::2] = xys[:,1]
         return {'image':img,'landmarks':landmask}
 
 class ToTensor(object):
