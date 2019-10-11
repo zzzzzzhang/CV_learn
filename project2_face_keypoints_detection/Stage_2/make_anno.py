@@ -1,9 +1,15 @@
 
 # coding: utf-8
 
+# In[ ]:
+
+
 import os
 import pandas as pd
 from PIL import Image, ImageDraw 
+
+
+# In[ ]:
 
 
 def make_anno(path_root):
@@ -32,11 +38,16 @@ def make_anno(path_root):
         x2 = labels[i,3]
         y2 = labels[i,4]
         
-        expand = 0.2
-        x1 = round(x1 - (x2 - x1) * expand if x1 - (x2 - x1) * expand >= 0 else 0)
-        x2 = round(x2 + (x2 - x1) * expand if x2 + (x2 - x1) * expand <= img.width else img.width)
-        y1 = round(y1 - (y2 - y1) * expand if y1 - (y2 - y1) * expand >= 0 else 0)
-        y2 = round(y2 + (y2 - y1) * expand if y2 + (y2 - y1) * expand <= img.height else img.height)
+        expand = 0.25
+        width = x2 - x1 + 1
+        height = y2 - y1 + 1
+        padding_width = int(width * expand)
+        padding_height = int(height * expand)
+        
+        x1 = round(x1 - padding_width if x1 - padding_width >= 0 else 0)
+        x2 = round(x2 + padding_width if x2 + padding_width < img.width else img.width-1)
+        y1 = round(y1 - padding_height if y1 - padding_height >= 0 else 0)
+        y2 = round(y2 + padding_height if y2 + padding_height < img.height else img.height-1)
         
 #         img = img.crop((x1, y1, x2, y2))
         dataIfo['path'].append(imgpath)
@@ -52,9 +63,23 @@ def make_anno(path_root):
             dataIfo['y' + str(j)].append(round(y_idx - y1,2))
             
     dataIfo = pd.DataFrame(dataIfo)
-    dataIfo.iloc[:round(0.7*len(dataIfo)), :].to_csv(train)
-    dataIfo.iloc[round(0.7*len(dataIfo)):, :].to_csv(test)
-    return pd.DataFrame(dataIfo)
+    
+    #删除坐标负值样本
+    idxs = []
+    for i ,row in enumerate(dataIfo.iloc[:,5:].values):
+        if all([0 if o < 0 else 1 for o in row]):
+            continue
+        else:
+            idxs.append(i)
+    dataIfo = dataIfo.drop(idxs)
+    #打乱数据行
+    dataIfo = dataIfo.sample(frac= 1, random_state=1)
+    dataIfo.iloc[:round(0.9*len(dataIfo)), :].to_csv(train, index= None)
+    dataIfo.iloc[round(0.9*len(dataIfo)):, :].to_csv(test, index= None)
+    return dataIfo
+
+
+# In[ ]:
 
 
 def visualize_dataset(dataIfo, idx):
@@ -77,15 +102,24 @@ def visualize_dataset(dataIfo, idx):
     ys = dataIfo.values[idx,6::2]
 
     assert len(xs) == len(ys)
-
+    
     draw.point(list(zip(xs,ys)),fill = (255, 0, 0))
     img = img.resize((256,256),Image.ANTIALIAS)
     
     img.show()
 
 
+# In[ ]:
+
+
 if __name__ == '__main__':
-    path_root = 'D:/cv_learn/projectII/'        
+    path_root = 'data/'        
     dataIfo = make_anno(path_root)
-    visualize_dataset(dataIfo, 2591)
+    visualize_dataset(dataIfo, 29)
+
+
+# In[ ]:
+
+
+Image.open(dataIfo['path'][29])
 

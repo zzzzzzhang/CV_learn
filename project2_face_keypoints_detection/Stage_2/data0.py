@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[ ]:
+# In[3]:
 
 
 import numpy as np
@@ -12,20 +12,20 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 from PIL import Image, ImageDraw 
 import itertools
-import random
 
 
-# In[ ]:
+# In[5]:
 
 
 def channel_norm(img):
     mean = np.mean(img)
     std = np.std(img)
-    pixels = (img-mean)/(std)
+    pixels = (img-mean)/(std + 0.00001)
+    #print('doing channel_norm')
     return pixels
 
 
-# In[ ]:
+# In[6]:
 
 
 def parse_line(line):
@@ -37,7 +37,7 @@ def parse_line(line):
     return img_name, rect, landmarks
 
 
-# In[ ]:
+# In[7]:
 
 
 class Normalize(object):
@@ -50,58 +50,11 @@ class Normalize(object):
     def __call__(self,sample):
         img, landmask = sample['image'], sample['landmarks']
         img_resize = np.asarray(img.resize((self.train_boarder, self.train_boarder),Image.BILINEAR))
-#         img_resize = channel_norm(img_resize)
+#        img_resize = channel_norm(img_resize)
         return {'image':img_resize,'landmarks':landmask}
 
 
-# In[ ]:
-
-
-class  FlipHorizontal(object):
-    '''
-    flip horizontal
-    '''
-    def __init__(self,p= 0.5, train_boarder= 112):
-        self.p = p
-        self.train_boarder = train_boarder
-    def __call__(self,sample):
-        img, landmask = sample['image'], sample['landmarks']
-        if random.random() < self.p:
-            img = img[:,::-1].copy()
-            landmask[0::2] = self.train_boarder - landmask[0::2].copy()
-        return {'image':img,'landmarks':landmask}
-
-
-# In[ ]:
-
-
-class  RandomRotation(object):
-    '''
-    RandomRotation(0,15)
-    '''
-    def __init__(self, train_boarder= 112, p= 0.5):
-        self.train_boarder = train_boarder
-        self.p = p
-    def __call__(self,sample):
-        img, landmask = sample['image'], sample['landmarks']
-        if random.random() < self.p:
-            ang = random.randint(-5, 5)
-            scale = 1.0
-            M = cv2.getRotationMatrix2D((self.train_boarder/2, self.train_boarder/2), ang, scale)
-            img = cv2.warpAffine(img, M, (self.train_boarder,self.train_boarder), flags= cv2.INTER_LINEAR)
-            xs = landmask[::2].copy()
-            ys = landmask[1::2].copy()
-        
-            #opencv获得的旋转矩阵是调整过的，需要注意
-            mxy = (np.c_[xs,ys] - np.array([self.train_boarder/2, self.train_boarder/2])) 
-            xys = (mxy.dot( np.transpose( M[:,:2] ) ) + np.array([self.train_boarder/2, self.train_boarder/2]))
-        
-            landmask[::2] = xys[:,0]
-            landmask[1::2] = xys[:,1]
-        return {'image':img,'landmarks':landmask}
-
-
-# In[ ]:
+# In[27]:
 
 
 class ToTensor(object):
@@ -123,7 +76,7 @@ class ToTensor(object):
                 'landmarks':torch.from_numpy(landmarks).float()}
 
 
-# In[ ]:
+# In[9]:
 
 
 class FaceLandmarksDataset():
@@ -174,7 +127,7 @@ class FaceLandmarksDataset():
         return sample
 
 
-# In[ ]:
+# In[10]:
 
 
 def load_data(filepath, phase):
@@ -185,8 +138,6 @@ def load_data(filepath, phase):
     if phase == 'Train' or phase == 'train':
         tsfm = transforms.Compose([
             Normalize(),                # do channel normalization
-#            FlipHorizontal(),           # do Flip Horizontal
-            RandomRotation(),           # do Random Rotation
             ToTensor()]                 # convert to torch type: NxCxHxW
         )
     else:
@@ -198,7 +149,7 @@ def load_data(filepath, phase):
     return data_set
 
 
-# In[67]:
+# In[11]:
 
 
 def get_train_test_set():
@@ -207,7 +158,7 @@ def get_train_test_set():
     return train_set, valid_set
 
 
-# In[68]:
+# In[25]:
 
 
 def drawLandMarks(path, idx):
@@ -227,28 +178,10 @@ def drawLandMarks(path, idx):
     img.show()
 
 
-# In[70]:
+# In[26]:
 
 
 if __name__ == '__main__':
     path= 'data/train/train_annotation.csv'
     drawLandMarks(path= path, idx= 117)
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 
